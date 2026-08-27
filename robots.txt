@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/sitemap.xml
+Sitemap: https://naveen-ns0.github.io/scanline/sitemap.xml
