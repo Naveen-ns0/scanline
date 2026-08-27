@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanline — Free Text Extraction from Images</title>
+<meta name="description" content="Pull text out of any image, free, right in your browser. No uploads, no sign-up, no limits.">
+
+<style>
+  :root {
+    --ink: #10222c;
+    --ink-soft: #1a3444;
+    --paper: #fbf8f1;
+    --paper-dim: #f0ebdd;
+    --amber: #e2a339;
+    --amber-deep: #c47f1f;
+    --slate: #5c7185;
+    --line: #d8d0bb;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--amber); color: var(--ink); }
+
+  a { color: inherit; }
+
+  /* ---------- Layout shell ---------- */
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  header.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 0 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+  .brand .dot { color: var(--amber); }
+  .brand .tag {
+    font-size: 11px;
+    color: var(--slate);
+    border: 1px solid var(--ink-soft);
+    padding: 3px 8px;
+    border-radius: 100px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  nav.top-links {
+    font-size: 13px;
+    color: var(--slate);
+    letter-spacing: 0.01em;
+  }
+
+  /* ---------- Hero / scanner ---------- */
+  .hero {
+    padding: 56px 0 20px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--amber);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: clamp(28px, 5vw, 44px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 16px;
+    max-width: 14ch;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--amber);
+  }
+
+  .sub {
+    color: #b9c2c9;
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 48ch;
+    margin: 0 0 40px;
+  }
+
+  /* ---------- Scanner unit (the signature element) ---------- */
+  .scanner {
+    background: var(--paper);
+    border-radius: 14px;
+    color: var(--ink);
+    padding: 0;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+
+  .scanner-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: var(--paper-dim);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--slate);
+  }
+  .scanner-bar .chip {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--line);
+  }
+  .scanner-bar .status {
+    margin-left: auto;
+    letter-spacing: 0.04em;
+  }
+  .scanner-bar .status.live { color: var(--amber-deep); }
+
+  .drop-stage {
+    position: relative;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .drop-stage.has-image { padding: 0; min-height: 0; }
+
+  .drop-empty {
+    text-align: center;
+    cursor: pointer;
+    width: 100%;
+    padding: 40px 20px;
+    border: 2px dashed var(--line);
+    border-radius: 10px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .drop-empty:hover, .drop-empty.dragover {
+    border-color: var(--amber);
+    background: rgba(226, 163, 57, 0.06);
+  }
+
+  .drop-icon {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--slate);
+    display: inline-block;
+    padding: 10px 16px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    margin-bottom: 18px;
+  }
+
+  .drop-empty p {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .drop-empty span {
+    font-size: 13px;
+    color: var(--slate);
+  }
+
+  input[type="file"] { display: none; }
+
+  .image-frame {
+    position: relative;
+    width: 100%;
+    line-height: 0;
+    background: #0000;
+  }
+  .image-frame img {
+    display: block;
+    width: 100%;
+    max-height: 460px;
+    object-fit: contain;
+    background: #111;
+  }
+
+  .scan-sweep {
+    position: absolute;
+    left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--amber) 20%, var(--amber) 80%, transparent);
+    box-shadow: 0 0 16px 2px rgba(226,163,57,0.8);
+    top: 0;
+    display: none;
+  }
+  .scan-sweep.active {
+    display: block;
+    animation: sweep 1.6s ease-in-out infinite;
+  }
+  @keyframes sweep {
+    0% { top: 0%; }
+    50% { top: 96%; }
+    100% { top: 0%; }
+  }
+
+  .result-zone {
+    padding: 20px 24px 24px;
+  }
+
+  .result-empty {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--slate);
+    padding: 6px 0;
+  }
+
+  textarea.output {
+    width: 100%;
+    min-height: 160px;
+    resize: vertical;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: #fffef9;
+  }
+  textarea.output:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+
+  .result-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: var(--sans);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--ink-soft); }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--ink);
+  }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--slate); }
+
+  select#lang {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fffef9;
+    color: var(--ink);
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .controls-row label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--slate);
+  }
+
+  /* ---------- Ad slots ---------- */
+  .ad-slot {
+    border: 1px dashed var(--ink-soft);
+    border-radius: 10px;
+    color: var(--slate);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: center;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 18px;
+    margin: 36px 0;
+  }
+
+  /* ---------- Info strip ---------- */
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--ink-soft);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 48px 0;
+  }
+  .strip .cell {
+    background: var(--ink);
+    padding: 22px 20px;
+  }
+  .strip .cell .k {
+    font-family: var(--mono);
+    color: var(--amber);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .strip .cell .v {
+    font-size: 14px;
+    color: #c6ccd1;
+    line-height: 1.5;
+  }
+
+  footer {
+    padding: 40px 0 60px;
+    color: var(--slate);
+    font-size: 13px;
+    border-top: 1px solid var(--ink-soft);
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  @media (max-width: 640px) {
+    .strip { grid-template-columns: 1fr; }
+    header.top { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scan-sweep.active { animation: none; top: 50%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand"><span class="dot">◆</span> scanline <span class="tag">image → text</span></div>
+    <nav class="top-links">no sign-up · runs on your device</nav>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">// optical character recognition</div>
+    <h1>Turn any image into <em>copyable text.</em></h1>
+    <p class="sub">Drop in a photo, screenshot, or scan. The text comes out the other side — no account, no upload to a server, no daily cap.</p>
+
+    <div class="scanner">
+      <div class="scanner-bar">
+        <span class="chip"></span><span class="chip"></span><span class="chip"></span>
+        <span class="status" id="statusText">waiting for an image</span>
+      </div>
+
+      <div class="drop-stage" id="dropStage">
+        <div class="drop-empty" id="dropEmpty">
+          <div class="drop-icon">⇪ drop image here</div>
+          <p>Drag an image, or click to browse</p>
+          <span>JPG, PNG, WEBP — works best on clear, well-lit text</span>
+        </div>
+        <div class="image-frame" id="imageFrame" style="display:none;">
+          <img id="preview" alt="Uploaded image preview">
+          <div class="scan-sweep" id="sweep"></div>
+        </div>
+      </div>
+
+      <input type="file" id="fileInput" accept="image/*">
+
+      <div class="result-zone">
+        <div class="controls-row">
+          <label for="lang">Language</label>
+          <select id="lang">
+            <option value="eng">English</option>
+            <option value="hin">Hindi</option>
+            <option value="mar">Marathi</option>
+            <option value="ben">Bengali</option>
+            <option value="tam">Tamil</option>
+            <option value="tel">Telugu</option>
+            <option value="guj">Gujarati</option>
+            <option value="kan">Kannada</option>
+          </select>
+        </div>
+
+        <div id="resultEmpty" class="result-empty">Extracted text will appear here once an image is processed.</div>
+        <textarea id="output" class="output" style="display:none;" placeholder="Extracted text will appear here…" readonly></textarea>
+
+        <div class="result-actions">
+          <button class="btn-primary" id="copyBtn" disabled>Copy text</button>
+          <button class="btn-ghost" id="downloadBtn" disabled>Download .txt</button>
+          <button class="btn-ghost" id="resetBtn" disabled>Start over</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ad-slot">ad space</div>
+
+  <section class="strip">
+    <div class="cell">
+      <div class="k">Private by default</div>
+      <div class="v">Your image is processed inside your own browser. It's never sent to a server.</div>
+    </div>
+    <div class="cell">
+      <div class="k">No limits</div>
+      <div class="v">No daily cap, no watermark, no account required to extract text.</div>
+    </div>
+    <div class="cell">
+      <div class="k">First run is slower</div>
+      <div class="v">The recognition engine downloads once (a few MB), then stays cached in your browser.</div>
+    </div>
+  </section>
+
+  <div class="ad-slot">ad space</div>
+
+  <footer>
+    <span>Scanline — a small, free tool.</span>
+    <span>Built for the people who just need the text out of the picture.</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+  const dropEmpty   = document.getElementById('dropEmpty');
+  const dropStage   = document.getElementById('dropStage');
+  const fileInput   = document.getElementById('fileInput');
+  const imageFrame  = document.getElementById('imageFrame');
+  const preview     = document.getElementById('preview');
+  const sweep       = document.getElementById('sweep');
+  const statusText  = document.getElementById('statusText');
+  const resultEmpty = document.getElementById('resultEmpty');
+  const output      = document.getElementById('output');
+  const copyBtn     = document.getElementById('copyBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const resetBtn    = document.getElementById('resetBtn');
+  const langSelect  = document.getElementById('lang');
+
+  function setStatus(text, live) {
+    statusText.textContent = text;
+    statusText.classList.toggle('live', !!live);
+  }
+
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    dropEmpty.style.display = 'none';
+    dropStage.classList.add('has-image');
+    imageFrame.style.display = 'block';
+    resetBtn.disabled = false;
+    runOCR(file);
+  }
+
+  dropEmpty.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropEmpty.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropEmpty.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dropEmpty.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropEmpty.classList.remove('dragover');
+    });
+  });
+  dropEmpty.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    handleFile(file);
+  });
+
+  async function runOCR(file) {
+    sweep.classList.add('active');
+    setStatus('reading image…', true);
+    resultEmpty.style.display = 'block';
+    resultEmpty.textContent = 'Working on it — this can take a moment, especially the first time.';
+    output.style.display = 'none';
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+
+    try {
+      const lang = langSelect.value;
+      const { data } = await Tesseract.recognize(file, lang, {
+        logger: (m) => {
+          if (m.status && m.progress != null) {
+            setStatus(`${m.status} — ${Math.round(m.progress * 100)}%`, true);
+          }
+        }
+      });
+
+      const text = (data && data.text ? data.text.trim() : '');
+      sweep.classList.remove('active');
+
+      if (!text) {
+        setStatus('no text found', false);
+        resultEmpty.style.display = 'block';
+        resultEmpty.textContent = "Couldn't find readable text in that image. Try a clearer photo or a different crop.";
+        return;
+      }
+
+      setStatus('done', false);
+      resultEmpty.style.display = 'none';
+      output.style.display = 'block';
+      output.value = text;
+      copyBtn.disabled = false;
+      downloadBtn.disabled = false;
+    } catch (err) {
+      sweep.classList.remove('active');
+      setStatus('something went wrong', false);
+      resultEmpty.style.display = 'block';
+      resultEmpty.textContent = 'Extraction failed. Try again, or use a different image.';
+      console.error(err);
+    }
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(output.value);
+    const original = copyBtn.textContent;
+    copyBtn.textContent = 'Copied';
+    setTimeout(() => { copyBtn.textContent = original; }, 1400);
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const blob = new Blob([output.value], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'extracted-text.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    fileInput.value = '';
+    preview.src = '';
+    dropStage.classList.remove('has-image');
+    imageFrame.style.display = 'none';
+    dropEmpty.style.display = 'block';
+    output.value = '';
+    output.style.display = 'none';
+    resultEmpty.style.display = 'block';
+    resultEmpty.textContent = 'Extracted text will appear here once an image is processed.';
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+    resetBtn.disabled = true;
+    setStatus('waiting for an image', false);
+  });
+</script>
+
+</body>
+</html>
