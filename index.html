@@ -7,6 +7,9 @@
 <meta name="description" content="Pull text out of any image, free, right in your browser. No uploads, no sign-up, no limits. Supports English, Hindi, Marathi, Bengali, Tamil, Telugu, Gujarati and Kannada.">
 <link rel="canonical" href="https://naveen-ns0.github.io/scanline/">
 
+<!--Google search console verification-->
+<meta name="google-site-verification" content="I2Nv5lFsmDEwxhFY4duI14UjG2b7LB9jltkYpDiGv80" />
+
 <!-- Open Graph (for link previews on WhatsApp, Facebook, LinkedIn, etc.) -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Scanline — Free Image to Text (OCR), No Sign-up">
@@ -20,9 +23,6 @@
 
 <meta name="keywords" content="ocr online free, image to text, extract text from image, hindi ocr, marathi ocr, regional language ocr, free text extraction tool">
 
-<!--Google search console verification-->
-<meta name="google-site-verification" content="I2Nv5lFsmDEwxhFY4duI14UjG2b7LB9jltkYpDiGv80" />
-  
 <style>
   :root {
     --ink: #10222c;
@@ -31,7 +31,10 @@
     --paper-dim: #f0ebdd;
     --amber: #e2a339;
     --amber-deep: #c47f1f;
+    --amber-on-light: #8a5410;
     --slate: #5c7185;
+    --slate-light: #93a7ba;
+    --slate-dark: #47596c;
     --line: #d8d0bb;
     --mono: 'IBM Plex Mono', 'Courier New', monospace;
     --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -76,7 +79,7 @@
   .brand .dot { color: var(--amber); }
   .brand .tag {
     font-size: 11px;
-    color: var(--slate);
+    color: var(--slate-light);
     border: 1px solid var(--ink-soft);
     padding: 3px 8px;
     border-radius: 100px;
@@ -86,7 +89,7 @@
 
   nav.top-links {
     font-size: 13px;
-    color: var(--slate);
+    color: var(--slate-light);
     letter-spacing: 0.01em;
   }
 
@@ -146,7 +149,7 @@
     border-bottom: 1px solid var(--line);
     font-family: var(--mono);
     font-size: 12px;
-    color: var(--slate);
+    color: var(--slate-dark);
   }
   .scanner-bar .chip {
     width: 8px; height: 8px; border-radius: 50%;
@@ -156,7 +159,7 @@
     margin-left: auto;
     letter-spacing: 0.04em;
   }
-  .scanner-bar .status.live { color: var(--amber-deep); }
+  .scanner-bar .status.live { color: var(--amber-on-light); }
 
   .drop-stage {
     position: relative;
@@ -187,7 +190,7 @@
   .drop-icon {
     font-family: var(--mono);
     font-size: 13px;
-    color: var(--slate);
+    color: var(--slate-dark);
     display: inline-block;
     padding: 10px 16px;
     border: 1px solid var(--line);
@@ -202,7 +205,7 @@
   }
   .drop-empty span {
     font-size: 13px;
-    color: var(--slate);
+    color: var(--slate-dark);
   }
 
   input[type="file"] { display: none; }
@@ -247,7 +250,7 @@
   .result-empty {
     font-family: var(--mono);
     font-size: 13px;
-    color: var(--slate);
+    color: var(--slate-dark);
     padding: 6px 0;
   }
 
@@ -319,14 +322,14 @@
   .controls-row label {
     font-family: var(--mono);
     font-size: 12px;
-    color: var(--slate);
+    color: var(--slate-dark);
   }
 
   /* ---------- Ad slots ---------- */
   .ad-slot {
     border: 1px dashed var(--ink-soft);
     border-radius: 10px;
-    color: var(--slate);
+    color: var(--slate-light);
     font-family: var(--mono);
     font-size: 11px;
     text-align: center;
@@ -366,7 +369,7 @@
 
   footer {
     padding: 40px 0 60px;
-    color: var(--slate);
+    color: var(--slate-light);
     font-size: 13px;
     border-top: 1px solid var(--ink-soft);
     margin-top: 40px;
